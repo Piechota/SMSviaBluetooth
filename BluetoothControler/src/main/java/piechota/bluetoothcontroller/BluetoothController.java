@@ -1,4 +1,4 @@
-package piechota.bluetoothcontroler;
+package piechota.bluetoothcontroller;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -38,6 +38,8 @@ public class BluetoothController {
     private UUID _uuid;     //uuid for program
     private Context _context; //activity context
 
+    private byte[] buffer;
+
     /*SETTERS*/
     public void setUUDI(String uuid){_uuid = UUID.fromString(uuid);} //settign uuid for program
     /*SETTERS*/
@@ -63,7 +65,7 @@ public class BluetoothController {
             try{_socket.close();}catch (IOException e){/*some magic*/}
         }
     }
-    public void turnOnBluetooth(Context context){  //guess what
+    public void turnOnBluetooth(Context context, int bufferSize){  //guess what
         if(_bluetoothAdapter != null){  //work only if we already not have adapter
             if(!_bluetoothAdapter.isEnabled())  //if adapter is turned off turn it on
                 _bluetoothAdapter.enable();     //(in really ugly way)
@@ -73,6 +75,7 @@ public class BluetoothController {
             }
 
             setBroadcastReceiver();
+            buffer = new byte[bufferSize];
         }
     }
     public void turnOffBluetooth(){ //it's simple
@@ -87,6 +90,23 @@ public class BluetoothController {
     }
     public void tryConnectAsServer(int timeForTry){ //method that try connect as a server
        new ConnectAsServer(timeForTry); //create object of class ConnectAsServer
+    }
+    public byte[] readBuffor() {
+        byte[] returned = new byte[buffer.length];
+        for(int i = 0; i < buffer.length; i++)
+            returned[i] = buffer[i];
+
+        return  returned;
+    }
+    public void writeBuffer(final byte[] bytes){
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    _outputStream.write(bytes);
+                } catch (IOException e) {/*next magic*/}
+            }
+        });
     }
     //private
     private void getStreams(){
@@ -103,6 +123,19 @@ public class BluetoothController {
 
         _inputStream = tmpIn;
         _outputStream = tmpOut;
+
+        if(_inputStream != null){
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while(true){
+                        try{
+                            _inputStream.read(buffer);
+                        } catch (IOException e) {break;}
+                    }
+                }
+            });
+        }
     }
     //constructors
     private BluetoothController() {  //constructor

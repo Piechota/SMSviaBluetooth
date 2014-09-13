@@ -1,4 +1,4 @@
-package piechota.bluetoothcontroler;
+package piechota.bluetoothcontroller;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;
