@@ -1,1 +1,1 @@
-include ':app', ':SMSviaBluetoothPhone', ':SMSviaBluetoothDevice', ':BluetoothControler'
+include ':SMSviaBluetoothPhone', ':SMSviaBluetoothDevice', ':BluetoothController'

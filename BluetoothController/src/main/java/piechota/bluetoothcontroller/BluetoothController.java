@@ -8,6 +8,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,11 +17,14 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.UUID;
-
 /**
  * Created by Konrad on 2014-09-06.
  */
 public class BluetoothController {
+    /*STATIC FIELD FOR BROADCAST*/
+    public static String CONNECTED = "CONNECTED";
+    /*STATIC FIELD FOR BROADCAST*/
+
     //singleton
     private static BluetoothController ourInstance = new BluetoothController();
     public static BluetoothController getInstance() {return ourInstance; }
@@ -53,12 +57,7 @@ public class BluetoothController {
     /*METHODS*/
     public void startDiscoveryDevices(){_bluetoothAdapter.startDiscovery();}
     public void endDiscoveryDevices(){_bluetoothAdapter.cancelDiscovery();}
-    public void setBroadcastReceiver(){      //setting broadcast receiver (need context)
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(BluetoothDevice.ACTION_FOUND); //this message is send when we find device
-        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED); //this message is send when bluetooth change state (e.g. turn on)
-        _context.registerReceiver(_receiver, filter);
-    }
+
     public void cleanUp(){  //clean up method
         _context.unregisterReceiver(_receiver);
         if(_socket != null) {
@@ -74,6 +73,7 @@ public class BluetoothController {
                     _pairedDevices.add(new Device(dev));
             }
 
+            _context = context;
             setBroadcastReceiver();
             buffer = new byte[bufferSize];
         }
@@ -88,15 +88,11 @@ public class BluetoothController {
     public void tryConnectAsClient(BluetoothDevice device){ //method that try connect as a client with given device
        new ConnectAsClient(device); //create object of class ConnectAsClient
     }
-    public void tryConnectAsServer(int timeForTry){ //method that try connect as a server
-       new ConnectAsServer(timeForTry); //create object of class ConnectAsServer
+    public void tryConnectAsServer(int secondsForTry){ //method that try connect as a server
+       new ConnectAsServer(secondsForTry); //create object of class ConnectAsServer
     }
-    public byte[] readBuffor() {
-        byte[] returned = new byte[buffer.length];
-        for(int i = 0; i < buffer.length; i++)
-            returned[i] = buffer[i];
-
-        return  returned;
+    public byte[] readBuffer() {
+        return  buffer;
     }
     public void writeBuffer(final byte[] bytes){
         new Thread(new Runnable() {
@@ -104,11 +100,17 @@ public class BluetoothController {
             public void run() {
                 try {
                     _outputStream.write(bytes);
-                } catch (IOException e) {/*next magic*/}
+                } catch (IOException e) {/*next magic*/Log.w("Error", "Can't send bytes");}
             }
-        });
+        }).start();
     }
     //private
+    private void setBroadcastReceiver(){      //setting broadcast receiver (need context)
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(BluetoothDevice.ACTION_FOUND); //this message is send when we find device
+        filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED); //this message is send when bluetooth change state (e.g. turn on)
+        _context.registerReceiver(_receiver, filter);
+    }
     private void getStreams(){
         if(_socket == null)
             return;
@@ -119,7 +121,7 @@ public class BluetoothController {
         try{
             tmpIn = _socket.getInputStream();
             tmpOut = _socket.getOutputStream();
-        } catch (IOException e){/*some magic here*/}
+        } catch (IOException e){/*some magic here*/Log.w("Error", "Can't get streams");}
 
         _inputStream = tmpIn;
         _outputStream = tmpOut;
@@ -130,12 +132,17 @@ public class BluetoothController {
                 public void run() {
                     while(true){
                         try{
-                            _inputStream.read(buffer);
-                        } catch (IOException e) {break;}
+                            byte[] tmpBuffer = new byte[buffer.length];
+                            if(_inputStream.read(tmpBuffer) > 0)
+                             buffer = tmpBuffer;
+                        } catch (IOException e) {Log.w("Error", "Can't read bytes");break;}
                     }
                 }
-            });
+            }).start();
         }
+    }
+    private void sendBroadcast(String action) {
+        _context.sendBroadcast(new Intent(action));
     }
     //constructors
     private BluetoothController() {  //constructor
@@ -172,6 +179,8 @@ public class BluetoothController {
 
         public  Device(BluetoothDevice device){ _device = device;} //constructor
 
+        public BluetoothDevice getDevice() { return  _device;}
+
         @Override
         public String toString(){
             return _device.getName();
@@ -187,7 +196,6 @@ public class BluetoothController {
         @Override
         public int hashCode() {return _device.hashCode();}
     }
-
     private final class ConnectAsClient extends Thread{ //class for connecting as client
         private ConnectAsClient(BluetoothDevice device){ //constructor that try to get socket
             BluetoothSocket tmp = null;
@@ -205,21 +213,20 @@ public class BluetoothController {
                 } catch (IOException e){/*we need some magic here*/}
                 return;
             }
-
             getStreams();
+            sendBroadcast(CONNECTED);
         }
     }
-
     private final class ConnectAsServer extends Thread{
         private  final BluetoothServerSocket _serverSocket;
-        private int _timeForTry;
+        private int _secondsForTry;
 
-        private ConnectAsServer(int timeForTry){
+        private ConnectAsServer(int secondsForTry){
             BluetoothServerSocket tmp = null;
             try{tmp = _bluetoothAdapter.listenUsingRfcommWithServiceRecord("SMS via bluetooth", _uuid);}
             catch (IOException e){/*let's make some magic*/}
             _serverSocket = tmp;
-            _timeForTry = timeForTry + Calendar.getInstance().get(Calendar.SECOND);
+            _secondsForTry = secondsForTry + Calendar.getInstance().get(Calendar.SECOND);
 
             this.start();
         }
@@ -232,10 +239,13 @@ public class BluetoothController {
                     getStreams();
                     try{_serverSocket.close();}
                     catch (IOException e){/*magic again*/}
+
+                    sendBroadcast(CONNECTED);
+
                     break;
                 }
 
-                if(Calendar.getInstance().get(Calendar.SECOND) >= _timeForTry){
+                if(Calendar.getInstance().get(Calendar.SECOND) >= _secondsForTry){
                     try{_serverSocket.close();}
                     catch (IOException e){/*magic again*/}
                     break;
