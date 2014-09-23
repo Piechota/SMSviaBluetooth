@@ -24,7 +24,7 @@ import piechota.bluetoothcontroller.BluetoothController;
 
 public class SMSviaBluetoothPhone_mainActivity extends Activity {
 
-    private ListView listDevaices;
+    private ListView listDevices;
     private Button buttonConnect;
     private Button buttonRead;
     private Button buttonWrite;
@@ -38,7 +38,7 @@ public class SMSviaBluetoothPhone_mainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_smsvia_bluetooth_phone_main);
 
-        listDevaices = (ListView)findViewById(R.id.listDevice);
+        listDevices = (ListView)findViewById(R.id.listDevice);
         buttonConnect = (Button)findViewById(R.id.buttonConnect);
         buttonRead = (Button)findViewById(R.id.buttonRead);
         buttonWrite = (Button)findViewById(R.id.buttonWrite);
@@ -48,17 +48,17 @@ public class SMSviaBluetoothPhone_mainActivity extends Activity {
         selectedDevice = null;
 
         BluetoothController.getInstance().setUUDI("878d94b0-3d23-11e4-916c-0800200c9a66");
-        BluetoothController.getInstance().turnOnBluetooth(this, 2048);
+        BluetoothController.getInstance().turnOnBluetooth(this, 3);
 
-        ArrayAdapter<BluetoothController.Device> devaicesAdapter =
+        ArrayAdapter<BluetoothController.Device> devicesAdapter =
                 new ArrayAdapter<BluetoothController.Device>(this, R.layout.devaice_list, BluetoothController.getInstance().getPairedDevices());
-        listDevaices.setAdapter(devaicesAdapter);
+        listDevices.setAdapter(devicesAdapter);
 
 
-        listDevaices.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        listDevices.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                selectedDevice = ((BluetoothController.Device) listDevaices.getItemAtPosition(i)).getDevice();
+                selectedDevice = ((BluetoothController.Device) listDevices.getItemAtPosition(i)).getDevice();
             }
         });
     }

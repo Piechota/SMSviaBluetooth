@@ -38,7 +38,7 @@ public class SMSviaBluetoothDevice_mainActivity extends Activity {
         textWrite = (EditText)findViewById(R.id.textWrite);
 
         BluetoothController.getInstance().setUUDI("878d94b0-3d23-11e4-916c-0800200c9a66");
-        BluetoothController.getInstance().turnOnBluetooth(this, 2048);
+        BluetoothController.getInstance().turnOnBluetooth(this, 3);
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(BluetoothController.CONNECTED);

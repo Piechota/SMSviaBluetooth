@@ -1,1 +1,1 @@
-include ':SMSviaBluetoothPhone', ':SMSviaBluetoothDevice', ':BluetoothController'
+include ':SMSviaBluetoothPhone', ':SMSviaBluetoothDevice', ':BluetoothController', ':Validate data ', ':DataControl'
